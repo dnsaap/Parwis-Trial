@@ -24,6 +24,22 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
+        // Definisi berbagai jenis Radar
+    const radarHujan = L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`, { opacity: 0.6 });
+    const radarSuhu = L.tileLayer(`https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${API_KEY}`, { opacity: 0.6 });
+    const radarAngin = L.tileLayer(`https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${API_KEY}`, { opacity: 0.6 });
+
+    // Tambahkan tombol kontrol di pojok kanan atas
+    const overlayMaps = {
+        "Radar Hujan": radarHujan,
+        "Radar Suhu": radarSuhu,
+        "Radar Angin": radarAngin
+    };
+    
+    L.control.layers(null, overlayMaps).addTo(map);
+    
+    // Aktifkan salah satu sebagai default
+    radarHujan.addTo(map);
 
         // 3. Konfigurasi API Cuaca
         const API_KEY = 'c7072f637f3e10343fcf2dad07423a11';
