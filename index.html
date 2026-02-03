@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebGIS Cuaca Real-Time Wisata</title>
+    <title>WebGIS Radar Cuaca Real-Time</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         #map { height: 600px; width: 100%; border-radius: 10px; }
@@ -12,81 +12,53 @@
     </style>
 </head>
 <body>
-    <h2>Monitoring Cuaca Lokasi Wisata (Real-Time)</h2>
+    <h2>Monitoring Radar & Cuaca Wisata (Real-Time)</h2>
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 1. Inisialisasi Peta (Fokus di Jawa Timur)
-        const map = L.map('map').setView([-7.9, 112.6], 8); 
-
-        // 2. Tambahkan Basemap (OpenStreetMap)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-        // Definisi berbagai jenis Radar
-    const radarHujan = L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`, { opacity: 0.6 });
-    const radarSuhu = L.tileLayer(`https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${API_KEY}`, { opacity: 0.6 });
-    const radarAngin = L.tileLayer(`https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${API_KEY}`, { opacity: 0.6 });
-
-    // Tambahkan tombol kontrol di pojok kanan atas
-    const overlayMaps = {
-        "Radar Hujan": radarHujan,
-        "Radar Suhu": radarSuhu,
-        "Radar Angin": radarAngin
-    };
-    
-    L.control.layers(null, overlayMaps).addTo(map);
-    
-    // Aktifkan salah satu sebagai default
-    radarHujan.addTo(map);
-
-        // 3. Konfigurasi API Cuaca
         const API_KEY = 'c7072f637f3e10343fcf2dad07423a11';
-        
-        // Daftar Lokasi Wisata & Riset (Sudah ditambahkan Pantai Balekambang)
+
+        // 1. Basemaps
+        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' });
+        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' });
+
+        const map = L.map('map', {
+            center: [-7.9, 112.6],
+            zoom: 8,
+            layers: [osm]
+        });
+
+        // 2. Lapisan Radar (Overlays)
+        const radarHujan = L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`, { opacity: 0.6 });
+        const radarSuhu = L.tileLayer(`https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${API_KEY}`, { opacity: 0.6 });
+        const radarAngin = L.tileLayer(`https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${API_KEY}`, { opacity: 0.6 });
+
+        // 3. Daftar Lokasi (Kembali ditambahkan agar tidak hilang)
         const lokasiWisata = [
             { nama: "Pantai Balekambang", lat: -8.402778, lon: 112.538889 },
-            { nama: "Gunung Bromo", lat: -7.9425, lon: 112.9530 },
-            { nama: "Pantai Gili Ketapang", lat: -7.6833, lon: 113.2500 },
-            { nama: "Kawah Ijen", lat: -8.0585, lon: 114.2421 }
+            { nama: "Area Riset Tuban", lat: -6.9015, lon: 112.0620 },
+            { nama: "Gili Ketapang", lat: -7.6833, lon: 113.2500 },
+            { nama: "Gunung Bromo", lat: -7.9425, lon: 112.9530 }
         ];
 
-        // 4. Fungsi Ambil Data Cuaca & Tambahkan ke Peta
+        // 4. Fungsi Menampilkan Marker & Data Cuaca
         lokasiWisata.forEach(wisata => {
             const url = `https://api.openweathermap.org/data/2.5/weather?lat=${wisata.lat}&lon=${wisata.lon}&appid=${API_KEY}&units=metric&lang=id`;
-            
-            fetch(url)
-                .then(res => res.json())
-                .then(data => {
-                    const temp = data.main.temp;
-                    const hum = data.main.humidity;
-                    const wind = data.wind.speed;
-                    const desc = data.weather[0].description;
-
-                    // Buat Marker
-                    const marker = L.marker([wisata.lat, wisata.lon]).addTo(map);
-                    
-                    // Tambahkan Label Nama (Tooltip) yang muncul otomatis di atas marker
-                    marker.bindTooltip(wisata.nama, {
-                        permanent: true, 
-                        direction: 'top',
-                        offset: [0, -10]
-                    }).openTooltip();
-
-                    // Popup Informasi Detail Cuaca saat marker diklik
-                    marker.bindPopup(`
-                        <div class="info-box">
-                            <b>${wisata.nama}</b><br>
-                            Kondisi: ${desc}<br>
-                            🌡️ Suhu: ${temp}°C<br>
-                            💧 Kelembaban: ${hum}%<br>
-                            💨 Angin: ${wind} m/s
-                        </div>
-                    `);
-                })
-                .catch(err => console.error("Gagal ambil data untuk " + wisata.nama + ":", err));
+            fetch(url).then(res => res.json()).then(data => {
+                const marker = L.marker([wisata.lat, wisata.lon]).addTo(map);
+                marker.bindTooltip(wisata.nama, {permanent: true, direction: 'top'}).openTooltip();
+                marker.bindPopup(`<b>${wisata.nama}</b><br>Suhu: ${data.main.temp}°C<br>Angin: ${data.wind.speed} m/s`);
+            });
         });
+
+        // 5. Tombol Kontrol (Pojok Kanan Atas)
+        const baseMaps = { "Peta Jalan": osm, "Satelit": satellite };
+        const overlayMaps = { "Radar Hujan": radarHujan, "Radar Suhu": radarSuhu, "Radar Angin": radarAngin };
+        L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+        // Aktifkan radar hujan secara default
+        radarHujan.addTo(map);
     </script>
 </body>
 </html>
