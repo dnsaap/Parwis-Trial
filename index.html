@@ -3,50 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebGIS Analisis Kenyamanan Wisata</title>
+    <title>Dashboard WebGIS Analisis Kenyamanan Wisata</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        #map { height: 600px; width: 100%; border-radius: 10px; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background: #f4f4f4; }
-        .legend { padding: 10px; background: rgba(255,255,255,0.9); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; line-height: 18px; color: #333; }
-        .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.8; }
-        .info-box { line-height: 1.6; }
-        .status-nyaman { color: green; font-weight: bold; }
-        .status-ok { color: orange; font-weight: bold; }
-        .status-panas { color: red; font-weight: bold; }
+        /* Mengatur tata letak dashboard */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; height: 100vh; background: #f0f2f5; }
+        
+        /* Panel Samping (Sidebar) */
+        #sidebar { 
+            width: 350px; 
+            background: white; 
+            padding: 20px; 
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1); 
+            display: flex; 
+            flex-direction: column; 
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        /* Container Peta */
+        #map { flex-grow: 1; height: 100vh; }
+
+        /* Komponen UI */
+        h1 { font-size: 1.4rem; color: #1a73e8; margin-bottom: 5px; }
+        .project-meta { font-size: 0.85rem; color: #666; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        
+        .data-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #1a73e8;
+        }
+
+        .data-card h3 { margin-top: 0; font-size: 1rem; color: #333; }
+        
+        /* Legenda di Sidebar */
+        .legend-container { margin-top: auto; padding-top: 20px; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 0.9rem; }
+        .legend-color { width: 18px; height: 18px; border-radius: 3px; margin-right: 10px; }
+
+        /* Status Warna */
+        .status-nyaman { color: #28a745; font-weight: bold; }
+        .status-ok { color: #fd7e14; font-weight: bold; }
+        .status-panas { color: #dc3545; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h2>Monitoring Radar Hujan & Indeks Kenyamanan</h2>
+
+    <div id="sidebar">
+        <h1>WebGIS Pariwisata</h1>
+        <div class="project-meta">
+            Proyek Akhir: Analisis Bioklimatologi Pesisir Selatan <br>
+            Update: Real-time (OpenWeather API)
+        </div>
+
+        <div class="data-card" id="info-panel">
+            <h3>Detail Lokasi</h3>
+            <p id="instruction">Silakan klik salah satu marker di peta untuk melihat analisis detail.</p>
+            <div id="detail-content" style="display:none;">
+                <b id="loc-name"></b><br>
+                🌡️ Suhu: <span id="loc-temp"></span>°C <br>
+                💧 Kelembaban: <span id="loc-hum"></span>% <br>
+                💨 Angin: <span id="loc-wind"></span> m/s <br>
+                📊 Indeks: <span id="loc-status"></span>
+            </div>
+        </div>
+
+        <div class="data-card">
+            <h3>Metodologi (Humidex)</h3>
+            <p style="font-size: 0.8rem;">Algoritma menghitung korelasi suhu dan kelembaban untuk menentukan tingkat kenyamanan fisik wisatawan secara real-time.</p>
+        </div>
+
+        <div class="legend-container">
+            <h4>Intensitas Hujan (Radar)</h4>
+            <div class="legend-item"><div class="legend-color" style="background: #4B0082"></div> Sangat Lebat</div>
+            <div class="legend-item"><div class="legend-color" style="background: #0000FF"></div> Lebat</div>
+            <div class="legend-item"><div class="legend-color" style="background: #00FF00"></div> Sedang</div>
+            <div class="legend-item"><div class="legend-color" style="background: #FFFF00"></div> Ringan</div>
+        </div>
+    </div>
+
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const API_KEY = 'c7072f637f3e10343fcf2dad07423a11';
 
-        // 1. Inisialisasi Peta
-        const map = L.map('map').setView([-7.9, 112.6], 8);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map);
+        const map = L.map('map').setView([-8.4, 112.5], 11); // Zoom lebih dekat ke pesisir
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+            attribution: '© OSM' 
+        }).addTo(map);
 
-        // 2. Tambahkan Radar Hujan (Hanya Hujan sesuai request)
-        const rainRadar = L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`, {
+        L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`, {
             opacity: 0.5
         }).addTo(map);
 
-        // 3. Tambahkan Legenda Radar Hujan
-        const legend = L.control({position: 'bottomright'});
-        legend.onAdd = function () {
-            const div = L.DomUtil.create('div', 'legend');
-            div.innerHTML = '<h4>Intensitas Hujan</h4>' +
-                '<i style="background: #4B0082"></i> Sangat Lebat<br>' +
-                '<i style="background: #0000FF"></i> Lebat<br>' +
-                '<i style="background: #00FF00"></i> Sedang<br>' +
-                '<i style="background: #FFFF00"></i> Ringan';
-            return div;
-        };
-        legend.addTo(map);
-
-        // 4. Daftar Lokasi
         const lokasiWisata = [
             { nama: "Pantai Balekambang", lat: -8.402778, lon: 112.538889 },
             { nama: "Pantai Ngantep", lat: -8.407778, lon: 112.575000 },
@@ -56,17 +109,13 @@
             { nama: "Pantai Modangan", lat: -8.343889, lon: 112.367500 }
         ];
 
-        // 5. Fungsi Algoritma Kenyamanan (Humidex Sederhana)
         function hitungKenyamanan(temp, hum) {
-            // Rumus pendekatan Humidex
             const h = temp + (0.5555 * (6.11 * Math.exp(5417.75 * (1/273.16 - 1/(273.15 + temp))) - 10));
-            
             if (h < 29) return { label: "Sangat Nyaman", kelas: "status-nyaman" };
             if (h >= 29 && h < 40) return { label: "Nyaman / Cukup", kelas: "status-ok" };
-            return { label: "Tidak Nyaman / Terlalu Lembab", kelas: "status-panas" };
+            return { label: "Tidak Nyaman", kelas: "status-panas" };
         }
 
-        // 6. Loop Lokasi & Ambil Data Real-time
         lokasiWisata.forEach(wisata => {
             const url = `https://api.openweathermap.org/data/2.5/weather?lat=${wisata.lat}&lon=${wisata.lon}&appid=${API_KEY}&units=metric&lang=id`;
             
@@ -74,21 +123,22 @@
                 const temp = data.main.temp;
                 const hum = data.main.humidity;
                 const wind = data.wind.speed;
-                
                 const kenyamanan = hitungKenyamanan(temp, hum);
 
                 const marker = L.marker([wisata.lat, wisata.lon]).addTo(map);
-                marker.bindTooltip(wisata.nama, {permanent: true, direction: 'top'}).openTooltip();
+                marker.bindTooltip(wisata.nama);
                 
-                marker.bindPopup(`
-                    <div class="info-box">
-                        <b>${wisata.nama}</b><hr>
-                        🌡️ <b>Suhu:</b> ${temp}°C<br>
-                        💧 <b>Kelembaban:</b> ${hum}%<br>
-                        💨 <b>Kec. Angin:</b> ${wind} m/s<br>
-                        📊 <b>Status:</b> <span class="${kenyamanan.kelas}">${kenyamanan.label}</span>
-                    </div>
-                `);
+                // Event klik pada marker untuk update Sidebar
+                marker.on('click', function() {
+                    document.getElementById('instruction').style.display = 'none';
+                    document.getElementById('detail-content').style.display = 'block';
+                    document.getElementById('loc-name').innerText = wisata.nama;
+                    document.getElementById('loc-temp').innerText = temp;
+                    document.getElementById('loc-hum').innerText = hum;
+                    document.getElementById('loc-wind').innerText = wind;
+                    document.getElementById('loc-status').innerText = kenyamanan.label;
+                    document.getElementById('loc-status').className = kenyamanan.kelas;
+                });
             });
         });
     </script>
