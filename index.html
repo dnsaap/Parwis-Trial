@@ -3,16 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebGIS Radar Cuaca Real-Time</title>
+    <title>WebGIS Radar Cuaca & Legenda</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         #map { height: 600px; width: 100%; border-radius: 10px; }
         body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
-        .info-box { background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        
+        /* Gaya untuk Legenda */
+        .legend {
+            padding: 10px;
+            background: white;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            line-height: 18px;
+            color: #555;
+        }
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.7;
+        }
+        .info-box { background: white; padding: 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <h2>Monitoring Radar & Cuaca Wisata (Real-Time)</h2>
+    <h2>Monitoring Radar & Legenda Cuaca (Real-Time)</h2>
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -29,12 +47,27 @@
             layers: [osm]
         });
 
-        // 2. Lapisan Radar (Overlays)
+        // 2. Lapisan Radar
         const radarHujan = L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`, { opacity: 0.6 });
         const radarSuhu = L.tileLayer(`https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${API_KEY}`, { opacity: 0.6 });
-        const radarAngin = L.tileLayer(`https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${API_KEY}`, { opacity: 0.6 });
 
-        // 3. Daftar Lokasi (Kembali ditambahkan agar tidak hilang)
+        // 3. Tambahkan Legenda ke Peta
+        const legend = L.control({position: 'bottomright'});
+
+        legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'info legend');
+            div.innerHTML = '<h4>Intensitas Hujan</h4>' +
+                '<i style="background: #4B0082"></i> Sangat Lebat<br>' +
+                '<i style="background: #0000FF"></i> Lebat<br>' +
+                '<i style="background: #00FF00"></i> Sedang<br>' +
+                '<i style="background: #FFFF00"></i> Ringan<br>' +
+                '<i style="background: #FFFFFF"></i> Berawan';
+            return div;
+        };
+
+        legend.addTo(map);
+
+        // 4. Daftar Lokasi Penelitian & Wisata
         const lokasiWisata = [
             { nama: "Pantai Balekambang", lat: -8.402778, lon: 112.538889 },
             { nama: "Area Riset Tuban", lat: -6.9015, lon: 112.0620 },
@@ -42,22 +75,21 @@
             { nama: "Gunung Bromo", lat: -7.9425, lon: 112.9530 }
         ];
 
-        // 4. Fungsi Menampilkan Marker & Data Cuaca
+        // 5. Menampilkan Marker
         lokasiWisata.forEach(wisata => {
             const url = `https://api.openweathermap.org/data/2.5/weather?lat=${wisata.lat}&lon=${wisata.lon}&appid=${API_KEY}&units=metric&lang=id`;
             fetch(url).then(res => res.json()).then(data => {
                 const marker = L.marker([wisata.lat, wisata.lon]).addTo(map);
                 marker.bindTooltip(wisata.nama, {permanent: true, direction: 'top'}).openTooltip();
-                marker.bindPopup(`<b>${wisata.nama}</b><br>Suhu: ${data.main.temp}°C<br>Angin: ${data.wind.speed} m/s`);
+                marker.bindPopup(`<b>${wisata.nama}</b><br>Suhu: ${data.main.temp}°C<br>Hujan: ${data.weather[0].description}`);
             });
         });
 
-        // 5. Tombol Kontrol (Pojok Kanan Atas)
+        // 6. Kontrol Layer
         const baseMaps = { "Peta Jalan": osm, "Satelit": satellite };
-        const overlayMaps = { "Radar Hujan": radarHujan, "Radar Suhu": radarSuhu, "Radar Angin": radarAngin };
+        const overlayMaps = { "Radar Hujan": radarHujan, "Radar Suhu": radarSuhu };
         L.control.layers(baseMaps, overlayMaps).addTo(map);
 
-        // Aktifkan radar hujan secara default
         radarHujan.addTo(map);
     </script>
 </body>
