@@ -3,94 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebGIS Radar Cuaca & Legenda</title>
+    <title>WebGIS Analisis Kenyamanan Wisata</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         #map { height: 600px; width: 100%; border-radius: 10px; }
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
-        
-        /* Gaya untuk Legenda */
-        .legend {
-            padding: 10px;
-            background: white;
-            background: rgba(255,255,255,0.9);
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
-            border-radius: 5px;
-            line-height: 18px;
-            color: #555;
-        }
-        .legend i {
-            width: 18px;
-            height: 18px;
-            float: left;
-            margin-right: 8px;
-            opacity: 0.7;
-        }
-        .info-box { background: white; padding: 10px; border-radius: 5px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background: #f4f4f4; }
+        .legend { padding: 10px; background: rgba(255,255,255,0.9); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; line-height: 18px; color: #333; }
+        .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.8; }
+        .info-box { line-height: 1.6; }
+        .status-nyaman { color: green; font-weight: bold; }
+        .status-ok { color: orange; font-weight: bold; }
+        .status-panas { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h2>Monitoring Radar & Legenda Cuaca (Real-Time)</h2>
+    <h2>Monitoring Radar Hujan & Indeks Kenyamanan</h2>
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const API_KEY = 'c7072f637f3e10343fcf2dad07423a11';
 
-        // 1. Basemaps
-        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' });
-        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' });
+        // 1. Inisialisasi Peta
+        const map = L.map('map').setView([-7.9, 112.6], 8);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map);
 
-        const map = L.map('map', {
-            center: [-7.9, 112.6],
-            zoom: 8,
-            layers: [osm]
-        });
+        // 2. Tambahkan Radar Hujan (Hanya Hujan sesuai request)
+        const rainRadar = L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`, {
+            opacity: 0.5
+        }).addTo(map);
 
-        // 2. Lapisan Radar
-        const radarHujan = L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`, { opacity: 0.6 });
-        const radarSuhu = L.tileLayer(`https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${API_KEY}`, { opacity: 0.6 });
-
-        // 3. Tambahkan Legenda ke Peta
+        // 3. Tambahkan Legenda Radar Hujan
         const legend = L.control({position: 'bottomright'});
-
-        legend.onAdd = function (map) {
-            const div = L.DomUtil.create('div', 'info legend');
+        legend.onAdd = function () {
+            const div = L.DomUtil.create('div', 'legend');
             div.innerHTML = '<h4>Intensitas Hujan</h4>' +
                 '<i style="background: #4B0082"></i> Sangat Lebat<br>' +
                 '<i style="background: #0000FF"></i> Lebat<br>' +
                 '<i style="background: #00FF00"></i> Sedang<br>' +
-                '<i style="background: #FFFF00"></i> Ringan<br>' +
-                '<i style="background: #FFFFFF"></i> Berawan';
+                '<i style="background: #FFFF00"></i> Ringan';
             return div;
         };
-
         legend.addTo(map);
 
-        // 4. Daftar Lokasi Penelitian & Wisata
+        // 4. Daftar Lokasi
         const lokasiWisata = [
             { nama: "Pantai Balekambang", lat: -8.402778, lon: 112.538889 },
-            { nama: "Area Riset Tuban", lat: -6.9015, lon: 112.0620 },
-            { nama: "Gili Ketapang", lat: -7.6833, lon: 113.2500 },
-            { nama: "Gunung Bromo", lat: -7.9425, lon: 112.9530 }
+            { nama: "Pantai Ngantep", lat: -8.407778, lon: 112.575000 },
+            { nama: "Pantai Batu Bengkung", lat: -8.428611, lon: 112.615000 },
+            { nama: "Pantai Tanjung Penyu", lat: -8.440000, lon: 112.643056 },
+            { nama: "Pantai Ngliyep", lat: -8.379167, lon: 112.422500 },
+            { nama: "Pantai Modangan", lat: -8.343889, lon: 112.367500 }
         ];
 
-        // 5. Menampilkan Marker
+        // 5. Fungsi Algoritma Kenyamanan (Humidex Sederhana)
+        function hitungKenyamanan(temp, hum) {
+            // Rumus pendekatan Humidex
+            const h = temp + (0.5555 * (6.11 * Math.exp(5417.75 * (1/273.16 - 1/(273.15 + temp))) - 10));
+            
+            if (h < 29) return { label: "Sangat Nyaman", kelas: "status-nyaman" };
+            if (h >= 29 && h < 40) return { label: "Nyaman / Cukup", kelas: "status-ok" };
+            return { label: "Tidak Nyaman / Terlalu Lembab", kelas: "status-panas" };
+        }
+
+        // 6. Loop Lokasi & Ambil Data Real-time
         lokasiWisata.forEach(wisata => {
             const url = `https://api.openweathermap.org/data/2.5/weather?lat=${wisata.lat}&lon=${wisata.lon}&appid=${API_KEY}&units=metric&lang=id`;
+            
             fetch(url).then(res => res.json()).then(data => {
+                const temp = data.main.temp;
+                const hum = data.main.humidity;
+                const wind = data.wind.speed;
+                
+                const kenyamanan = hitungKenyamanan(temp, hum);
+
                 const marker = L.marker([wisata.lat, wisata.lon]).addTo(map);
                 marker.bindTooltip(wisata.nama, {permanent: true, direction: 'top'}).openTooltip();
-                marker.bindPopup(`<b>${wisata.nama}</b><br>Suhu: ${data.main.temp}°C<br>Hujan: ${data.weather[0].description}`);
+                
+                marker.bindPopup(`
+                    <div class="info-box">
+                        <b>${wisata.nama}</b><hr>
+                        🌡️ <b>Suhu:</b> ${temp}°C<br>
+                        💧 <b>Kelembaban:</b> ${hum}%<br>
+                        💨 <b>Kec. Angin:</b> ${wind} m/s<br>
+                        📊 <b>Status:</b> <span class="${kenyamanan.kelas}">${kenyamanan.label}</span>
+                    </div>
+                `);
             });
         });
-
-        // 6. Kontrol Layer
-        const baseMaps = { "Peta Jalan": osm, "Satelit": satellite };
-        const overlayMaps = { "Radar Hujan": radarHujan, "Radar Suhu": radarSuhu };
-        L.control.layers(baseMaps, overlayMaps).addTo(map);
-
-        radarHujan.addTo(map);
     </script>
 </body>
 </html>
