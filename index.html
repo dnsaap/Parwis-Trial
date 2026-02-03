@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGIS Cuaca Real-Time Wisata</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 600px; width: 100%; border-radius: 10px; }
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+        .info-box { background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <h2>Monitoring Cuaca Lokasi Wisata (Real-Time)</h2>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 1. Inisialisasi Peta (Fokus di Jawa Timur)
+        const map = L.map('map').setView([-7.9, 112.6], 8); 
+
+        // 2. Tambahkan Basemap (OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // 3. Konfigurasi API Cuaca
+        const API_KEY = 'c7072f637f3e10343fcf2dad07423a11';
+        
+        // Daftar Lokasi Wisata & Riset (Sudah ditambahkan Pantai Balekambang)
+        const lokasiWisata = [
+            { nama: "Pantai Balekambang", lat: -8.402778, lon: 112.538889 },
+            { nama: "Gunung Bromo", lat: -7.9425, lon: 112.9530 },
+            { nama: "Pantai Gili Ketapang", lat: -7.6833, lon: 113.2500 },
+            { nama: "Kawah Ijen", lat: -8.0585, lon: 114.2421 }
+        ];
+
+        // 4. Fungsi Ambil Data Cuaca & Tambahkan ke Peta
+        lokasiWisata.forEach(wisata => {
+            const url = `https://api.openweathermap.org/data/2.5/weather?lat=${wisata.lat}&lon=${wisata.lon}&appid=${API_KEY}&units=metric&lang=id`;
+            
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    const temp = data.main.temp;
+                    const hum = data.main.humidity;
+                    const wind = data.wind.speed;
+                    const desc = data.weather[0].description;
+
+                    // Buat Marker
+                    const marker = L.marker([wisata.lat, wisata.lon]).addTo(map);
+                    
+                    // Tambahkan Label Nama (Tooltip) yang muncul otomatis di atas marker
+                    marker.bindTooltip(wisata.nama, {
+                        permanent: true, 
+                        direction: 'top',
+                        offset: [0, -10]
+                    }).openTooltip();
+
+                    // Popup Informasi Detail Cuaca saat marker diklik
+                    marker.bindPopup(`
+                        <div class="info-box">
+                            <b>${wisata.nama}</b><br>
+                            Kondisi: ${desc}<br>
+                            🌡️ Suhu: ${temp}°C<br>
+                            💧 Kelembaban: ${hum}%<br>
+                            💨 Angin: ${wind} m/s
+                        </div>
+                    `);
+                })
+                .catch(err => console.error("Gagal ambil data untuk " + wisata.nama + ":", err));
+        });
+    </script>
+</body>
+</html>
